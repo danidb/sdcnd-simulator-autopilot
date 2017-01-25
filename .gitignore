@@ -89,3 +89,4 @@ ENV/
 .ropeproject
 
 *.x86_64
+Default*
