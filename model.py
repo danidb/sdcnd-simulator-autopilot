@@ -3,6 +3,9 @@ import numpy as np
 import os
 import tensorflow
 import keras
+
+import argparse
+
 from scipy import misc
 
 from keras.models import Model
@@ -69,43 +72,63 @@ def simception_model(model_input):
     return fully_connected_final
 
 
-#####
-# Data loading and preparation
-#####
-
-# We create a training set, and a validation set with a 70-30 split.
-print("Preparing training data.")
-training_nsamples, validation_nsamples = prepare_training_files("./data/driving_log.csv")
-
-print()
-print("_________________________________________")
-print("Training, N: ", training_nsamples, " Validation, N: ", validation_nsamples)
 
 
-print("Data prepared.")
-# Model prep for trainingco
-model_input = Input(shape=(40, 80, 1))
-model_final = Model(input=model_input, output=simception_model(model_input))
+if __name__ == "__main__":
 
-model_final.compile(optimizer='adam', loss='mean_squared_error')
+    parser = argparse.ArgumentParser(description="Model preparation")
+
+    parser.add_argument(
+        "--sample_only",
+        nargs="?",
+        dest="sample_only",
+        const=True, default=False,
+        help=("Flag - if present, only split training/validation and produce"
+                "sample iamge output. If this is present, model is not trained."))
+
+    args = parser.parse_args()
 
 
-batch_size = 128
-print("Batch size: ", batch_size)
-print("_________________________________________")
-model_final.fit_generator(generate_model_data('./data/training_log.csv',
-                                              image_preprocess,
-                                              batch_size=batch_size,
-                                              nsamples=training_nsamples),
-                          validation_data=generate_model_data('./data/validation_log.csv',
-                                                              image_preprocess,
-                                                              batch_size=batch_size,
-                                                              nsamples=validation_nsamples),
-                          samples_per_epoch=(training_nsamples // batch_size)*batch_size,
-                          nb_val_samples=(validation_nsamples // batch_size)*batch_size,
-                          nb_epoch=10,
-                          verbose=1)
-model_final.save('model.h5', overwrite=True)
-print("_________________________________________")
-print("Model saved.")
-print("_________________________________________")
+    print("Preparing training data.")
+    training_nsamples, validation_nsamples = prepare_training_files(log_path="./data/driving_log.csv",
+                                                                    sample_dir="./sample_images",
+                                                                    n_save_samples=5,
+                                                                    steering_correction=0.2)
+    print()
+    print("_________________________________________")
+    print("Training, N: ", training_nsamples, " Validation, N: ", validation_nsamples)
+
+
+    print("Data prepared.")
+
+    if not args.sample_only :
+
+        # Model prep for trainingco
+        model_input = Input(shape=(70,70,1))
+        model_final = Model(input=model_input, output=simception_model(model_input))
+
+        model_final.compile(optimizer='adam', loss='mean_squared_error')
+
+
+        batch_size = 16
+        print("Batch size: ", batch_size)
+        print("_________________________________________")
+        model_final.fit_generator(generate_model_data('./data/training_log.csv',
+                                                        image_preprocess,
+                                                      batch_size=batch_size,
+                                                        nsamples=training_nsamples),
+                                    validation_data=generate_model_data('./data/validation_log.csv',
+                                                                        image_preprocess,
+                                                                      batch_size=batch_size,
+                                                                        nsamples=validation_nsamples),
+                                    samples_per_epoch=(training_nsamples // batch_size)*batch_size,
+                                    nb_val_samples=(validation_nsamples // batch_size)*batch_size,
+                                  nb_epoch=5,
+                                    verbose=1)
+        model_final.save('model.h5', overwrite=True)
+        print("_________________________________________")
+        print("Model saved.")
+        print("_________________________________________")
+
+    else:
+        print("Exiting without training.")

@@ -7,6 +7,8 @@ from scipy import misc
 from itertools import islice
 import sklearn
 
+from sample_images import prepare_sample_images
+
 if int(sklearn.__version__.replace('.', '')) >= 180 :
     from sklearn.model_selection import train_test_split as tts
 else:
@@ -24,20 +26,23 @@ def image_preprocess(img):
     """
 
     image_working = img
-    image_working = cv2.cvtColor(image_working, cv2.COLOR_RGB2GRAY)
-    image_working = cv2.resize(image_working, (40, 80), interpolation=cv2.INTER_AREA)
-    image_working = clahe_GRAY(image_working, clipLimit=1, tileGridSize=(4,4))
+    image_working = cv2.cvtColor(image_working, cv2.COLOR_BGR2GRAY)
+    # Manually crop off the horizon
+    image_working = image_working[60:130,0:300]
+    image_working = clahe_GRAY(image_working, clipLimit=1, tileGridSize=(2,2))
+    image_working = cv2.resize(image_working, (70, 70))
 
-    return image_working.reshape(40, 80, 1)
+    return image_working.reshape(70, 70, 1)
 
 
 
-def split_log_row(log_row, log_path):
+def split_log_row(log_row, log_path, steering_correction):
     """ Split one row of the driving log into three rows, one per camera.
 
     Args:
     log_row: Row of the log file
     log_path: Path of the log file
+    steering_correction: Correction applied to angle coming from left/right cameras.
 
     Returns:
     List of length three, each entry is a row of the expanded log file.
@@ -47,9 +52,9 @@ def split_log_row(log_row, log_path):
 
     c_img_path, l_img_path, r_img_path, angle, _, _, _ = log_row
 
-    return [[expand_image_path(c_img_path.strip()), float(angle.strip())]]
-#            [expand_image_path(l_img_path.strip()), float(angle.strip())],
-#            [expand_image_path(r_img_path.strip()), float(angle.strip())]]
+    return [[expand_image_path(c_img_path.strip()), float(angle.strip())+steering_correction],
+            [expand_image_path(l_img_path.strip()), float(angle.strip())+steering_correction],
+            [expand_image_path(r_img_path.strip()), float(angle.strip())-steering_correction]]
 
 
 def process_log_row(log_row, img_process_FUN):
@@ -93,11 +98,14 @@ def clahe_GRAY(img, clipLimit, tileGridSize):
     img_ret = img_clahe.apply(img)
     return(img_ret)
 
-def prepare_training_files(log_path):
+def prepare_training_files(log_path, sample_dir, n_save_samples, steering_correction):
     """ Shuffle and split the driving logfile into training and validation data
 
     Args:
     log_path: Path to the original log file output by the simulator.
+    sample_dir: Directory for sample images.
+    n_save_samples: Number of sample images to save, with pre-processing applied.
+    steering_correction: Correction applied to images coming from the left/right cameras.
 
     Returns:
     An integer, the nubmer of validation samples.
@@ -108,7 +116,7 @@ def prepare_training_files(log_path):
     with open(log_path, 'rt') as orig_logfile:
         # Note that we skip the first line, as it only contains row headers.
         orig_log = list(csv.reader(orig_logfile))[1:]
-        orig_log = [split_log_row(log_row, log_path) for log_row in orig_log]
+        orig_log = [split_log_row(log_row, log_path, steering_correction) for log_row in orig_log]
         orig_log = [row for entry in orig_log for row in entry]
 
         random.shuffle(orig_log)
@@ -116,6 +124,7 @@ def prepare_training_files(log_path):
         training_log, validation_log = tts(orig_log, random_state=1729, test_size=0.3)
 
     with open(os.path.dirname(log_path) + '/training_log.csv', 'wt') as training_logfile:
+        prepare_sample_images(training_log, out_dir=sample_dir, n=n_save_samples)
         csv.writer(training_logfile, quoting=csv.QUOTE_NONE, delimiter=",").writerows(training_log)
 
     with open(os.path.dirname(log_path) + '/validation_log.csv', 'wt') as validation_logfile:
