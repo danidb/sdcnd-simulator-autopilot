@@ -64,8 +64,8 @@ def simception_model(model_input):
 
     flattened = Flatten()(dropout_three)
 
-    fully_connected_one   = Dense(256, activation='elu', W_regularizer=l2(0.01))(flattened)
-    fully_connected_two   = Dense(128, activation='elu', W_regularizer=l2(0.01))(fully_connected_one)
+    fully_connected_one   = Dense(128, activation='elu', W_regularizer=l2(0.01))(flattened)
+    fully_connected_two   = Dense(64, activation='elu', W_regularizer=l2(0.01))(fully_connected_one)
     fully_connected_three = Dense(16, activation='elu', W_regularizer=l2(0.01))(fully_connected_two)
     fully_connected_final = Dense(1, activation='linear')(fully_connected_three)
 
@@ -87,11 +87,12 @@ if __name__ == "__main__":
                 "sample iamge output. If this is present, model is not trained."))
 
     args = parser.parse_args()
-
+    image_size = (70, 140)
 
     print("Preparing training data.")
     training_nsamples, validation_nsamples = prepare_training_files(log_path="./data/driving_log.csv",
                                                                     sample_dir="./sample_images",
+                                                                    image_size=image_size,
                                                                     n_save_samples=5,
                                                                     steering_correction=0.2)
     print()
@@ -104,26 +105,28 @@ if __name__ == "__main__":
     if not args.sample_only :
 
         # Model prep for trainingco
-        model_input = Input(shape=(70,70,1))
+        model_input = Input(shape=(image_size[0], image_size[1], 1))
         model_final = Model(input=model_input, output=simception_model(model_input))
 
         model_final.compile(optimizer='adam', loss='mean_squared_error')
 
+        batch_size = 32
 
-        batch_size = 16
         print("Batch size: ", batch_size)
         print("_________________________________________")
         model_final.fit_generator(generate_model_data('./data/training_log.csv',
-                                                        image_preprocess,
-                                                      batch_size=batch_size,
-                                                        nsamples=training_nsamples),
+                                                          image_size=image_size,
+                                                          image_process_FUN=image_preprocess,
+                                                          batch_size=batch_size,
+                                                          nsamples=training_nsamples),
                                     validation_data=generate_model_data('./data/validation_log.csv',
-                                                                        image_preprocess,
-                                                                      batch_size=batch_size,
-                                                                        nsamples=validation_nsamples),
+                                                                            image_size=image_size,
+                                                                            image_process_FUN=image_preprocess,
+                                                                            batch_size=batch_size,
+                                                                            nsamples=validation_nsamples),
                                     samples_per_epoch=(training_nsamples // batch_size)*batch_size,
                                     nb_val_samples=(validation_nsamples // batch_size)*batch_size,
-                                  nb_epoch=5,
+                                    nb_epoch=5,
                                     verbose=1)
         model_final.save('model.h5', overwrite=True)
         print("_________________________________________")

@@ -15,24 +15,25 @@ else:
     from sklearn.cross_validation import train_test_split as tts
 GROW = None
 
-def image_preprocess(img):
+def image_preprocess(image, image_size):
     """ Pre-process images from the udacity SDCND simulator
 
     Args:
-    img: Image to process. Must be in color (RGB).
+    image: Image to process. Must be in color (RGB).
+    image_size: Size to which the image is rescaled - (keep cropping in mind).
 
     Returns:
-    The input img after application of (1) grayscale ...
+    The input image after application of (1) grayscale ...
     """
 
-    image_working = img
+    image_working = image
     image_working = cv2.cvtColor(image_working, cv2.COLOR_BGR2GRAY)
     # Manually crop off the horizon
     image_working = image_working[60:130,0:300]
     image_working = clahe_GRAY(image_working, clipLimit=1, tileGridSize=(2,2))
-    image_working = cv2.resize(image_working, (70, 70))
+    image_working = cv2.resize(image_working, image_size)
 
-    return image_working.reshape(70, 70, 1)
+    return image_working.reshape(image_size[0], image_size[1], 1)
 
 
 
@@ -48,16 +49,16 @@ def split_log_row(log_row, log_path, steering_correction):
     List of length three, each entry is a row of the expanded log file.
     """
 
-    expand_image_path = lambda img_path: os.path.abspath(os.path.join(os.path.dirname(log_path), img_path))
+    expand_image_path = lambda image_path: os.path.abspath(os.path.join(os.path.dirname(log_path), image_path))
 
-    c_img_path, l_img_path, r_img_path, angle, _, _, _ = log_row
+    c_image_path, l_image_path, r_image_path, angle, _, _, _ = log_row
 
-    return [[expand_image_path(c_img_path.strip()), float(angle.strip())+steering_correction],
-            [expand_image_path(l_img_path.strip()), float(angle.strip())+steering_correction],
-            [expand_image_path(r_img_path.strip()), float(angle.strip())-steering_correction]]
+    return [[expand_image_path(c_image_path.strip()), float(angle.strip())+steering_correction],
+            [expand_image_path(l_image_path.strip()), float(angle.strip())+steering_correction],
+            [expand_image_path(r_image_path.strip()), float(angle.strip())-steering_correction]]
 
 
-def process_log_row(log_row, img_process_FUN):
+def process_log_row(log_row, image_process_FUN, image_size):
     """ Process a row of the driving log.
 
     For the purposes of this experiment, we are only concerned with centre image, and
@@ -65,7 +66,8 @@ def process_log_row(log_row, img_process_FUN):
 
     Args:
     log_row: One row of the log driving log.
-    img_process_FUN: Function to apply to each loaded image, preparing it for input to the pipeline.
+    image_process_FUN: Function to apply to each loaded image, preparing it for input to the pipeline.
+    image_size: Size to which the cropped image is to be resized.
 
     Returns:
     A tuple (A, B) where A is a numpy array with the three images, and B is a numpy array
@@ -73,38 +75,39 @@ def process_log_row(log_row, img_process_FUN):
     """
 
     # We'll be applying this method over a list of image paths
-    img_path, angle = log_row
+    image_path, angle = log_row
 
-    image = img_process_FUN(misc.imread(img_path))
+    image = image_process_FUN(misc.imread(image_path), image_size)
     angle = float(angle)
 
     return (image, angle)
 
 
-def clahe_GRAY(img, clipLimit, tileGridSize):
+def clahe_GRAY(image, clipLimit, tileGridSize):
     """ Apply Contrast-Limited Adaptive Histogram Equalization with OpenCV
 
     Contrast-Limited Adaptive Histogram Equalization is applied to a grayscale image.
 
     Args:
-        img: Input image, should be in RGB colorspace.
+        image: Input image, should be in RGB colorspace.
         clipLimit: Passed to cv2.createCLAHE
         tileGridSize: Passed to cv2.createCLAHE
 
     Returns:
         The input image, with CLAHE applied, still as grayscale.
     """
-    img_clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
-    img_ret = img_clahe.apply(img)
-    return(img_ret)
+    image_clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    image_ret = image_clahe.apply(image)
+    return(image_ret)
 
-def prepare_training_files(log_path, sample_dir, n_save_samples, steering_correction):
+def prepare_training_files(log_path, sample_dir, n_save_samples, image_size, steering_correction):
     """ Shuffle and split the driving logfile into training and validation data
 
     Args:
     log_path: Path to the original log file output by the simulator.
     sample_dir: Directory for sample images.
     n_save_samples: Number of sample images to save, with pre-processing applied.
+    image_size: Final size to which the input image is resized, after cropping.
     steering_correction: Correction applied to images coming from the left/right cameras.
 
     Returns:
@@ -124,7 +127,7 @@ def prepare_training_files(log_path, sample_dir, n_save_samples, steering_correc
         training_log, validation_log = tts(orig_log, random_state=1729, test_size=0.3)
 
     with open(os.path.dirname(log_path) + '/training_log.csv', 'wt') as training_logfile:
-        prepare_sample_images(training_log, out_dir=sample_dir, n=n_save_samples)
+        prepare_sample_images(training_log, out_dir=sample_dir, image_size=image_size, n=n_save_samples)
         csv.writer(training_logfile, quoting=csv.QUOTE_NONE, delimiter=",").writerows(training_log)
 
     with open(os.path.dirname(log_path) + '/validation_log.csv', 'wt') as validation_logfile:
@@ -133,13 +136,14 @@ def prepare_training_files(log_path, sample_dir, n_save_samples, steering_correc
     return (len(training_log), len(validation_log))
 
 
-def generate_model_data(expanded_log_path, img_process_FUN, batch_size, nsamples):
+def generate_model_data(expanded_log_path, image_size, image_process_FUN, batch_size, nsamples):
     """ Generator for training model training data
 
     Args:
     expanded_log_path: Relative path of expanded training/validation logs.
     image_process_FUN: Image pre-processing function to apply.
     batch_size: Number of elements to return with each iteration (model batch size).
+    image_size: Final size of images, after cropping and resizing.
     nsamples: Total number of samples (obtained when the original driving log is parsed).
 
     Returns:
@@ -169,7 +173,7 @@ def generate_model_data(expanded_log_path, img_process_FUN, batch_size, nsamples
 
                     for row in batch:
 
-                        image, angle = process_log_row(row, img_process_FUN)
+                        image, angle = process_log_row(row, image_process_FUN, image_size=image_size)
 
                         images += [image]
                         angles += [angle]

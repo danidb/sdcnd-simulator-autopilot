@@ -44,7 +44,8 @@ def telemetry(sid, data):
             steering_angle = 0
             throttle = 0
         else:
-            image_array = image_preprocess(image_array).reshape(1, 40,80,1)
+            image_array = image_preprocess(image_array)
+            image_array = image_array.reshape(1, image_array.shape[0], image_array.shape[1], 1)
             steering_angle = float(model.predict(image_array, batch_size=1))
 
             throttle = 0.20

@@ -9,7 +9,7 @@ from scipy import misc
 from random import sample
 
 
-def prepare_sample_images(training_log, out_dir='./sample_images', n=5):
+def prepare_sample_images(training_log, image_size, out_dir='./sample_images', n=5):
     """ Plot n sample images, selected at random from the training data.
 
     Both 'before' and 'after' iamges are drawn to a given file, the naming scheme
@@ -18,6 +18,7 @@ def prepare_sample_images(training_log, out_dir='./sample_images', n=5):
     Args:
     training_log: Training data (not the full driving log).
     n: Number of random sample images to draw.
+    image_size: Size to which cropped input images are resized.
     out_dir: Directory in which to save sample images
 
     Returns:
@@ -29,7 +30,7 @@ def prepare_sample_images(training_log, out_dir='./sample_images', n=5):
     for i,path in enumerate(image_paths):
         raw_image = misc.imread(path)
 
-        processed_image = pp.image_preprocess(raw_image)
+        processed_image = pp.image_preprocess(raw_image, image_size=image_size)
         processed_image = processed_image.reshape(processed_image.shape[:2])
 
         # The images are drawn side by side.
