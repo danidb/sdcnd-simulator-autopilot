@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import socketio
 import eventlet
-nnimport eventlet.wsgi
+import eventlet.wsgi
 from PIL import Image
 from flask import Flask
 from io import BytesIO
@@ -26,6 +26,7 @@ app = Flask(__name__)
 model = None
 prev_image_array = None
 
+input_shape = (48, 48, 3)
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -34,7 +35,7 @@ def telemetry(sid, data):
         steering_angle = data["steering_angle"]
         # The current throttle of the car
         throttle = data["throttle"]
-        # The current speed of the car
+        # The current nspeed of the car
         speed = data["speed"]
         # The current image from the center camera of the car
         imgString = data["image"]
@@ -44,15 +45,15 @@ def telemetry(sid, data):
             steering_angle = 0
             throttle = 0
         else:
-            image_array = image_preprocess(image_array)
-            image_array = image_array.reshape(1, image_array.shape[0], image_array.shape[1], 1)
+            image_array = image_preprocess(image_array, input_shape=input_shape)
+            image_array = image_array.reshape(1, input_shape[0], input_shape[1], 3)
             steering_angle = float(model.predict(image_array, batch_size=1))
 
-            throttle = 0.20
+            throttle = 0.1
 
         send_control(steering_angle, throttle)
 
-        # save frame
+        # save fram
         if args.image_folder != '':
             timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
             image_filename = os.path.join(args.image_folder, timestamp)
@@ -95,7 +96,10 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
+    print("Loading model.")
+    print("Please note, this takes approximately __ minutes...")
     model = load_model(args.model)
+    print("Model loaded.")
 
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))

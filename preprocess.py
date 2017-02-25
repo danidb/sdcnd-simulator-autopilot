@@ -6,36 +6,31 @@ import random
 from scipy import misc
 from itertools import islice
 import sklearn
+import progressbar
 
-from sample_images import prepare_sample_images
 
 if int(sklearn.__version__.replace('.', '')) >= 180 :
     from sklearn.model_selection import train_test_split as tts
 else:
     from sklearn.cross_validation import train_test_split as tts
-GROW = None
 
-def image_preprocess(image, image_size):
+def image_preprocess(image, input_shape):
     """ Pre-process images from the udacity SDCND simulator
 
     Args:
     image: Image to process. Must be in color (RGB).
-    image_size: Size to which the image is rescaled - (keep cropping in mind).
+    input_shape: The final shape to which the input image is resized.
 
     Returns:
-    The input image after application of (1) grayscale ...
+    The input image after cropping, the aplication of CLAHE, and resizing.
     """
 
     image_working = image
-    image_working = cv2.cvtColor(image_working, cv2.COLOR_BGR2GRAY)
-    # Manually crop off the horizon
-    image_working = image_working[60:130,0:300]
-    image_working = clahe_GRAY(image_working, clipLimit=1, tileGridSize=(2,2))
-    image_working = cv2.resize(image_working, image_size)
+    image_working = image_working[60:130,0:300,:]
+    image_working = cv2.resize(image_working, (input_shape[0], input_shape[1]))
+    image_working = clahe_RGB(image_working, clipLimit=2, tileGridSize=(2,2))
 
-    return image_working.reshape(image_size[0], image_size[1], 1)
-
-
+    return image_working
 
 def split_log_row(log_row, log_path, steering_correction):
     """ Split one row of the driving log into three rows, one per camera.
@@ -53,61 +48,58 @@ def split_log_row(log_row, log_path, steering_correction):
 
     c_image_path, l_image_path, r_image_path, angle, _, _, _ = log_row
 
-    return [[expand_image_path(c_image_path.strip()), float(angle.strip())+steering_correction],
-            [expand_image_path(l_image_path.strip()), float(angle.strip())+steering_correction],
-            [expand_image_path(r_image_path.strip()), float(angle.strip())-steering_correction]]
+    return [[expand_image_path(c_image_path.strip()), float(angle.strip())],
+            [expand_image_path(l_image_path.strip()), float(angle.strip()) + steering_correction],
+            [expand_image_path(r_image_path.strip()), float(angle.strip()) - steering_correction]]
 
-
-def process_log_row(log_row, image_process_FUN, image_size):
+def preprocess_log_row(log_row, image_process_FUN, input_shape):
     """ Process a row of the driving log.
 
-    For the purposes of this experiment, we are only concerned with centre image, and
-    the steering angle.
+    For the purposes of this experiment, we are only concerned with the steering angle.
+    Images are pre-processed, and mirrored. They are saved in the same directory. Pre-processed
+    images are given a leading 'p_', and  mirror images are saved with a leading 'pm_'.
 
     Args:
+
     log_row: One row of the log driving log.
+
     image_process_FUN: Function to apply to each loaded image, preparing it for input to the pipeline.
-    image_size: Size to which the cropped image is to be resized.
+
+    input_shape: Size to which the cropped image is to be resized.
 
     Returns:
-    A tuple (A, B) where A is a numpy array with the three images, and B is a numpy array
-    with the steering angle repeated once per image.
+    A tuple (A, B, C, D). A is the path of the pre-processed non-mirror image.
+    B is the original steering angle. C is the  mirror image of the pre-processed input image, and D is the angle
+    multiplied by -1.
     """
 
-    # We'll be applying this method over a list of image paths
     image_path, angle = log_row
+    image_dir, image_name = os.path.split(image_path)
 
-    image = image_process_FUN(misc.imread(image_path), image_size)
+    # The original image is preprocessed and saved, this pre-processed images is
+    # then saved.
+    image = image_process_FUN(misc.imread(image_path), input_shape=input_shape)
     angle = float(angle)
+    p_image_path = os.path.join(image_dir, 'p_' + image_name)
+    misc.imsave(p_image_path, image)
 
-    return (image, angle)
+    image_mirror = np.fliplr(image)
+    angle_mirror = -angle
+    pm_image_path = os.path.join(image_dir, 'pm_' + image_name)
+    misc.imsave(pm_image_path, image_mirror)
+
+    return (p_image_path, angle, pm_image_path, angle_mirror)
 
 
-def clahe_GRAY(image, clipLimit, tileGridSize):
-    """ Apply Contrast-Limited Adaptive Histogram Equalization with OpenCV
-
-    Contrast-Limited Adaptive Histogram Equalization is applied to a grayscale image.
-
-    Args:
-        image: Input image, should be in RGB colorspace.
-        clipLimit: Passed to cv2.createCLAHE
-        tileGridSize: Passed to cv2.createCLAHE
-
-    Returns:
-        The input image, with CLAHE applied, still as grayscale.
-    """
-    image_clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
-    image_ret = image_clahe.apply(image)
-    return(image_ret)
-
-def prepare_training_files(log_path, sample_dir, n_save_samples, image_size, steering_correction):
-    """ Shuffle and split the driving logfile into training and validation data
+def prepare_training_files(log_path, input_shape, steering_correction):
+    """ Preprocess, shuffle, and split simulator data into training/validation sets.
 
     Args:
+
     log_path: Path to the original log file output by the simulator.
-    sample_dir: Directory for sample images.
-    n_save_samples: Number of sample images to save, with pre-processing applied.
-    image_size: Final size to which the input image is resized, after cropping.
+
+    input_shape: Final size to which the input image is resized, after cropping.
+
     steering_correction: Correction applied to images coming from the left/right cameras.
 
     Returns:
@@ -122,12 +114,25 @@ def prepare_training_files(log_path, sample_dir, n_save_samples, image_size, ste
         orig_log = [split_log_row(log_row, log_path, steering_correction) for log_row in orig_log]
         orig_log = [row for entry in orig_log for row in entry]
 
-        random.shuffle(orig_log)
+        preproc_log = []
+        pbar = progressbar.ProgressBar(max_value=len(orig_log))
+        pbar.start()
+        for i,row in enumerate(orig_log):
 
-        training_log, validation_log = tts(orig_log, random_state=1729, test_size=0.3)
+            p_image_path, angle, pm_image_path, mirror_angle = preprocess_log_row(row,
+                                                                                  image_process_FUN = image_preprocess,
+                                                                                  input_shape = input_shape)
+            preproc_log += [(p_image_path, angle), (pm_image_path, mirror_angle)]
+
+            pbar.update(i)
+
+        pbar.finish()
+
+        preproc_log = sklearn.utils.shuffle(preproc_log, random_state=1729)
+
+        training_log, validation_log = tts(preproc_log, random_state=1729, test_size=0.2)
 
     with open(os.path.dirname(log_path) + '/training_log.csv', 'wt') as training_logfile:
-        prepare_sample_images(training_log, out_dir=sample_dir, image_size=image_size, n=n_save_samples)
         csv.writer(training_logfile, quoting=csv.QUOTE_NONE, delimiter=",").writerows(training_log)
 
     with open(os.path.dirname(log_path) + '/validation_log.csv', 'wt') as validation_logfile:
@@ -136,15 +141,17 @@ def prepare_training_files(log_path, sample_dir, n_save_samples, image_size, ste
     return (len(training_log), len(validation_log))
 
 
-def generate_model_data(expanded_log_path, image_size, image_process_FUN, batch_size, nsamples):
+def generate_model_data(expanded_log_path, input_shape, batch_size, nsamples):
     """ Generator for training model training data
 
     Args:
     expanded_log_path: Relative path of expanded training/validation logs.
-    image_process_FUN: Image pre-processing function to apply.
+
     batch_size: Number of elements to return with each iteration (model batch size).
-    image_size: Final size of images, after cropping and resizing.
-    nsamples: Total number of samples (obtained when the original driving log is parsed).
+
+    input_shape: Shape if input, tuple of length 3.
+
+    nsamples: Total number of samples (obtained when the input log is parsed).
 
     Returns:
     A tuple ([images,...], [angles,...]) where the length of both lists = batch_size.
@@ -173,11 +180,39 @@ def generate_model_data(expanded_log_path, image_size, image_process_FUN, batch_
 
                     for row in batch:
 
-                        image, angle = process_log_row(row, image_process_FUN, image_size=image_size)
-
-                        images += [image]
-                        angles += [angle]
+                        image = misc.imread(row[0])
+                        images += [image.reshape(input_shape)]
+                        angles += [float(row[1])]
 
                     batch = []
 
                     yield (np.array(images), np.array(angles))
+
+
+
+def clahe_RGB(img, clipLimit, tileGridSize):
+    """ Apply Contrast-Limited Adaptive Histogram Equalization with OpenCV
+
+    Contrast-Limited Adaptive Histogram Equalization is applied to each
+    of the three color channels of an RGB image. The result is returned
+    as an RGB image.
+
+    Args:
+        img: Input image  should be in RGB colorspace.
+        clipLimit: Passed to cv2.createCLAHE
+        tileGridSize: Passed to cv2.createCLAHE
+
+    Returns:
+        The input image  with CLAHE applied  in RGB
+    """
+
+    r, g, b = cv2.split(img)
+
+    img_clahe   = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    img_clahe_r = img_clahe.apply(r)
+    img_clahe_g = img_clahe.apply(g)
+    img_clahe_b = img_clahe.apply(b)
+
+    img_ret = cv2.merge((img_clahe_r,  img_clahe_g,  img_clahe_b))
+
+    return(img_ret)
