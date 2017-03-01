@@ -1,5 +1,7 @@
 # Steering Angle Prediction for Simulated Automated Driving
 
+The purpose of this work is personal scholarship - a number of neural network architectures, including pre-trained models (VGG16, InceptionV3, ResNet50) were applied to the problem of steering angle prediction in self driving vehicles. The sources contained here represent the final version of this effort, and include a convolutional network based on a highly efficient architecture published by NVidia. See below for further details.
+
 ## Overview
 This project contains a very simple 'autopilot' for the Udacity SDCND simulator. Based on visual images alone from a single front-facing camera, a convolutional neural network is applied to predict steering angle, while the vehicle maintains a constant speed (obvious future extensions abound..).
 
