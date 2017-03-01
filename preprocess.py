@@ -135,7 +135,7 @@ def prepare_training_files(log_path, input_shape, steering_correction):
 
     return (len(training_log), len(validation_log))
 
-n
+
 def generate_model_data(expanded_log_path, input_shape, batch_size, nsamples):
     """ Generator for training model training data
 
