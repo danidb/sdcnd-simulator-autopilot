@@ -1,7 +1,7 @@
 # Steering Angle Prediction for Simulated Automated Driving
 
 ## Overview
-This project contains a very simple 'autopilot' for the Udacity SDCND simulator. Based on visual images alone from a single fron-facing camera, a convolutional neural network is applied to predict steering angle, while the vehicle maintains a constant speed (obvious future extensions abound..).
+This project contains a very simple 'autopilot' for the Udacity SDCND simulator. Based on visual images alone from a single front-facing camera, a convolutional neural network is applied to predict steering angle, while the vehicle maintains a constant speed (obvious future extensions abound..).
 
 ## Data
 The training and testing data consists of many thousands of images captured on training laps in the simulator, and the steering angles with which they are associated. Furthermore, many more images are produced by data augmentation, including the use of images from cameras on the sides of the vehicle.
