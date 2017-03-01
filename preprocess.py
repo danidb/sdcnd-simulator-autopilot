@@ -29,6 +29,7 @@ def image_preprocess(image, input_shape):
     image_working = image_working[60:130,0:300,:]
     image_working = cv2.resize(image_working, (input_shape[0], input_shape[1]))
     image_working = clahe_RGB(image_working, clipLimit=2, tileGridSize=(2,2))
+    image_working = cv2.cvtColor(image_working, cv2.COLOR_RGB2YUV)
 
     return image_working
 
@@ -56,8 +57,8 @@ def preprocess_log_row(log_row, image_process_FUN, input_shape):
     """ Process a row of the driving log.
 
     For the purposes of this experiment, we are only concerned with the steering angle.
-    Images are pre-processed, and mirrored. They are saved in the same directory. Pre-processed
-    images are given a leading 'p_', and  mirror images are saved with a leading 'pm_'.
+    Images are pre-processed. They are saved in the same directory. Pre-processed
+    images are given a leading 'p_'.
 
     Args:
 
@@ -68,9 +69,8 @@ def preprocess_log_row(log_row, image_process_FUN, input_shape):
     input_shape: Size to which the cropped image is to be resized.
 
     Returns:
-    A tuple (A, B, C, D). A is the path of the pre-processed non-mirror image.
-    B is the original steering angle. C is the  mirror image of the pre-processed input image, and D is the angle
-    multiplied by -1.
+    A tuple (A, B). A is the path of the pre-processed non-mirror image.
+    B is the original steering angle.
     """
 
     image_path, angle = log_row
@@ -83,12 +83,7 @@ def preprocess_log_row(log_row, image_process_FUN, input_shape):
     p_image_path = os.path.join(image_dir, 'p_' + image_name)
     misc.imsave(p_image_path, image)
 
-    image_mirror = np.fliplr(image)
-    angle_mirror = -angle
-    pm_image_path = os.path.join(image_dir, 'pm_' + image_name)
-    misc.imsave(pm_image_path, image_mirror)
-
-    return (p_image_path, angle, pm_image_path, angle_mirror)
+    return (p_image_path, angle)
 
 
 def prepare_training_files(log_path, input_shape, steering_correction):
@@ -98,7 +93,7 @@ def prepare_training_files(log_path, input_shape, steering_correction):
 
     log_path: Path to the original log file output by the simulator.
 
-    input_shape: Final size to which the input image is resized, after cropping.
+    input_shape: Final size to which the input image is resinzed, after cropping.
 
     steering_correction: Correction applied to images coming from the left/right cameras.
 
@@ -119,10 +114,10 @@ def prepare_training_files(log_path, input_shape, steering_correction):
         pbar.start()
         for i,row in enumerate(orig_log):
 
-            p_image_path, angle, pm_image_path, mirror_angle = preprocess_log_row(row,
-                                                                                  image_process_FUN = image_preprocess,
-                                                                                  input_shape = input_shape)
-            preproc_log += [(p_image_path, angle), (pm_image_path, mirror_angle)]
+            p_image_path, angle  = preprocess_log_row(row,
+                                                      image_process_FUN = image_preprocess,
+                                                      input_shape = input_shape)
+            preproc_log += [(p_image_path, angle)]
 
             pbar.update(i)
 
@@ -140,7 +135,7 @@ def prepare_training_files(log_path, input_shape, steering_correction):
 
     return (len(training_log), len(validation_log))
 
-
+n
 def generate_model_data(expanded_log_path, input_shape, batch_size, nsamples):
     """ Generator for training model training data
 
