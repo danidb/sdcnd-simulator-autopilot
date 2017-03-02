@@ -119,14 +119,14 @@ if __name__ == "__main__":
             validation_nsamples = sum(1 for row in validation_reader)
 
 
-        batch_size = 32
+        batch_size = 128
 
         print("Batch size: ", batch_size)
         print("_________________________________________")
 
         train_steering('./data/training_log.csv', './data/validation_log.csv',
                        training_nsamples, validation_nsamples,
-                       input_shape=input_shape, epochs=10)
+                       input_shape=input_shape, epochs=5)
 
         print("_________________________________________")
         print("Model saved.")

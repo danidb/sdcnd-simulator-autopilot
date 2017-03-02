@@ -25,8 +25,7 @@ def steering_model(input_shape, optimizer='adam', loss='mean_squared_error'):
 
     mod = nvidia_model(input_shape = input_shape)
 
-    mod.compile(optimizer=optimizer,
-                loss=loss)
+    mod.compile(optimizer=optimizer, loss=loss)
 
     return mod
 
@@ -48,14 +47,14 @@ def nvidia_model(input_shape=(48, 48, 3)):
     """
 
     mod = Sequential()
-    mod.add(Convolution2D(3, 5, 5, input_shape = input_shape, activation='relu', border_mode='valid'))
-    mod.add(Dropout(0.5))
-    mod.add(Convolution2D(24, 5, 5, subsample=(2,2), activation='relu', border_mode='valid'))
-    mod.add(Dropout(0.5))
-    mod.add(Convolution2D(36, 5, 5, subsample=(2,2), activation='relu', border_mode='valid'))
-    mod.add(Dropout(0.5))
-    mod.add(Convolution2D(48, 3, 3, subsample=(2,2), activation='relu', border_mode='valid'))
-    mod.add(Dropout(0.5))
+    mod.add(Convolution2D(4, 5, 5, input_shape = input_shape, activation='relu', border_mode='valid'))
+    mod.add(Dropout(0.1))
+    mod.add(Convolution2D(8, 5, 5, subsample=(2,2), activation='relu', border_mode='valid'))
+    mod.add(Dropout(0.1))
+    mod.add(Convolution2D(16, 5, 5, subsample=(2,2), activation='relu', border_mode='valid'))
+    mod.add(Dropout(0.1))
+    mod.add(Convolution2D(32, 3, 3, subsample=(2,2), activation='relu', border_mode='valid'))
+    mod.add(Dropout(0.1))
     mod.add(Convolution2D(64, 3, 3, subsample=(2,2), activation='relu', border_mode='valid'))
     mod.add(Flatten())
     mod.add(Dense(1164, W_regularizer=l2(0.01)))

@@ -97,7 +97,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("Loading model.")
-    print("Please note, this takes approximately __ minutes...")
     model = load_model(args.model)
     print("Model loaded.")
 
