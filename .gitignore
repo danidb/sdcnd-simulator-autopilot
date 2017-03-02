@@ -91,5 +91,3 @@ ENV/
 *.x86_64
 *_Data
 *data/
-
-model.h5
