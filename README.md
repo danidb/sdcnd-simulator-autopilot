@@ -11,11 +11,17 @@ The training and testing data consists of many thousands of images captured on t
 As the training, validation, and testing data is quite large, it is not included in this repository. It is available on request.
 
 ## Further details
-Further details related to model architecture, pre-processing, feature extraction etc. will be added to the document `writeup.md`. Briefly, the architecture applied here is defined in `model_definition.py` and is implemented with Keras. It is based on the architecture used by NVidia to successfully pilot a vehicle in the publication 'End to End Learnig for Self Driving Cars' (Bojarski et. al., 2016). On the development machine (see below) the model performs extremely quickly, and training is rapid. The model implemented here is somewhat smaller than that of the original authors, and includes additional facilities for preventing overfitting - deemed necessary due to the limied available training environment.
+
+### Image pre-processing
+
+### Model Architecture
+Briefly, the architecture applied here is defined in `model_definition.py` and is implemented with Keras. It is based on the architecture used by NVidia to successfully pilot a vehicle in the publication 'End to End Learnig for Self Driving Cars' (Bojarski et. al., 2016). On the development machine (see below) the model performs extremely quickly, and training is rapid. The model implemented here is somewhat smaller than that of the original authors, and includes additional facilities for preventing overfitting - deemed necessary due to the limied available training environment. The diagram below illustrates the modified architecture applied here. Of note, the the third 5x5 convolution of the NVidia network is changed to a 3x3 convolution. To save resources, image input to the network are pre-processed more extensively, and are resized to be smaller than those used in the NVidia model.
+
+<img align='center' src='steernet.png' alt='Steernet Architecture, modified from Bojarski et. al. 2016.'>
 
 Non-negligible image pre-processing is carried out on each image fed to the model - including histogram normalization (CLAHE), cropping, color-space conversion, etc. Further details are to be found in `preprocess.py`.
 
-`training.py` has a simple command line interface. Generally training/testing images are preprocessed separately to speed up model training. The flag `--skip-training` enables the user to halt after pre-processing the training/testing data, without training the model. The flat `--skip-preproc` enables training of the model without re-processing the training/testing data, which is not necessary if simple changes in the model are being evaluated.
+`training.py` has a simple command line interface. Generally training/testing images are preprocessed separately to speed up model training. The flag `--skip-training` enables the user to halt after pre-processing the training/testing data, without training the model. The flat `--skip-preproc` enables training of the model without re-processing the training/testing data, which is not necessary if simple markdchanges in the model are being evaluated.
 
 ## Development Machine
 Development was carried out on a MacBook Pro 11'3 (nVidia 750M GPU), running Ubuntu 16.10. Python 3.5.2 and Anaconda 4.2 were used here, and Keras was run with a TensorFlow backend, making full use of the system's GPU.
