@@ -91,3 +91,4 @@ ENV/
 *.x86_64
 *_Data
 *data/
+*run*/
