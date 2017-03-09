@@ -26,7 +26,7 @@ app = Flask(__name__)
 model = None
 prev_image_array = None
 
-input_shape = (48, 48, 3)
+input_shape = (60, 60, 3)
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -53,7 +53,7 @@ def telemetry(sid, data):
 
         send_control(steering_angle, throttle)
 
-        # save fram
+        # save frame
         if args.image_folder != '':
             timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
             image_filename = os.path.join(args.image_folder, timestamp)
