@@ -281,9 +281,6 @@ def nvidia_model(input_shape=(160, 320, 3)):
 
     return mod
 
-#####
-# Model Definition
-#####
 def train_steering(training_logpath, validation_logpath, training_n, validation_n,
                    outpath='model.h5', input_shape=(48, 48, 3), batch_size=16, epochs=5):
     """ Train the steering angle model.
