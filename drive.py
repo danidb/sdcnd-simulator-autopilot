@@ -19,7 +19,7 @@ from io import BytesIO
 
 from keras.models import load_model
 
-from preprocess import image_preprocess
+from model import image_preprocess
 
 sio = socketio.Server()
 app = Flask(__name__)
