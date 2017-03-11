@@ -26,7 +26,7 @@ app = Flask(__name__)
 model = None
 prev_image_array = None
 
-input_shape = (60, 60, 3)
+input_shape = (40, 160, 3)
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -61,7 +61,6 @@ def telemetry(sid, data):
     else:
         # NOTE: DON'T EDIT THIS.
         sio.emit('manual', data={}, skip_sid=True)
-
 
 @sio.on('connect')
 def connect(sid, environ):

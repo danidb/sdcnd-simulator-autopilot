@@ -15,8 +15,9 @@ import progressbar
 from keras.models import Model, Sequential
 from keras.layers import Input, Dense, Flatten, Convolution2D, Dropout, Cropping2D
 from keras.layers.core import Lambda
-from keras.layers.pooling import AveragePooling2D
+from keras.layers.pooling import AveragePooling2D, MaxPooling2D
 from keras.regularizers import l2
+from keras.layers.normalization import BatchNormalization
 
 
 if int(sklearn.__version__.replace('.', '')) >= 180 :
@@ -34,10 +35,10 @@ def image_preprocess(image, input_shape):
     Returns:
     The input image after cropping, the aplication of CLAHE, and resizing.
     """
-    image_working = image[40:150,:,:]
-    image_working = cv2.resize(image_working, (input_shape[0], input_shape[1]))
+    image_working = image[60:140,:,:]
+    image_working = cv2.resize(image_working, (input_shape[1], input_shape[0]))
     image_working = clahe_RGB(image_working, clipLimit=2, tileGridSize=(2,2))
-    image_working = cv2.cvtColor(image_working, cv2.COLOR_RGB2YUV)
+    image_working = cv2.cvtColor(image_working, cv2.COLOR_RGB2HSV)
 
     return image_working
 
@@ -259,23 +260,24 @@ def nvidia_model(input_shape=(160, 320, 3)):
     Keras model for image regression.
     """
 
-    normalizer = lambda img: img/255 - 0.5
-
     mod = Sequential()
-    mod.add(Lambda(normalizer, input_shape=input_shape))
-    mod.add(Convolution2D(4, 5, 5, input_shape=input_shape, activation='relu', border_mode='valid'))
-    mod.add(Convolution2D(8, 5, 5, subsample=(2,2), activation='relu', border_mode='valid'))
+    mod.add(Convolution2D(4, 5, 5, subsample=(1,2), activation='relu', border_mode='valid', input_shape=input_shape))
+
+    mod.add(Convolution2D(8, 5, 5, subsample=(1,2), activation='relu', border_mode='valid'))
+
     mod.add(Convolution2D(16, 3, 3, subsample=(2,2), activation='relu', border_mode='valid'))
-    mod.add(Dropout(0.5))
+    mod.add(Dropout(0.2))
+
     mod.add(Convolution2D(32, 3, 3, subsample=(2,2), activation='relu', border_mode='valid'))
-    mod.add(Dropout(0.5))
+    mod.add(Dropout(0.2))
+
     mod.add(Convolution2D(64, 3, 3, subsample=(2,2), activation='relu', border_mode='valid'))
+    mod.add(Dropout(0.2))
+
     mod.add(Flatten())
-    mod.add(Dense(1024))
     mod.add(Dense(512))
     mod.add(Dense(256))
-    mod.add(Dense(128))
-    mod.add(Dense(32))
+    mod.add(Dense(64))
     mod.add(Dense(16))
     mod.add(Dense(1))
 
@@ -315,7 +317,7 @@ def train_steering(training_logpath, validation_logpath, training_n, validation_
     samples_per_epoch = (training_n // batch_size) * batch_size
     nb_val_samples = (validation_n // batch_size) * batch_size
 
-    mod = md.steering_model(input_shape=input_shape,
+    mod = steering_model(input_shape=input_shape,
                             optimizer='adam',
                             loss='mean_squared_error')
 
@@ -362,13 +364,13 @@ if __name__ == "__main__":
               " data, without then training the model."))
 
     args = parser.parse_args()
-    input_shape = (60, 60, 3)
+    input_shape = (40, 160, 3)
 
     if not args.skip_preproc:
         print("Preparing training data.")
         training_nsamples, validation_nsamples = prepare_training_files(log_path="./data/driving_log.csv",
                                                                         input_shape=input_shape,
-                                                                        steering_correction=0.1)
+                                                                        steering_correction=0.15)
         print()
         print("_________________________________________")
         print("Training, N: ", training_nsamples, " Validation, N: ", validation_nsamples)
@@ -387,14 +389,15 @@ if __name__ == "__main__":
             validation_nsamples = sum(1 for row in validation_reader)
 
 
-        batch_size = 32
+        batch_size = 16
 
         print("Batch size: ", batch_size)
         print("_________________________________________")
 
         train_steering('./data/training_log.csv', './data/validation_log.csv',
                        training_nsamples, validation_nsamples,
-                       input_shape=input_shape, epochs=5)
+                       input_shape=input_shape, epochs=20,
+                       batch_size=batch_size)
 
         print("_________________________________________")
         print("Model saved.")
