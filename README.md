@@ -22,6 +22,7 @@ A very simple pre-processing pipeline is applied to each image.
 
 
 <img align='center' src='sample.png' alt='A sample image, after pre-processing.'>
+
 **A sample pre-processed image.** Note that the colors appear modified - this is to reflect the transormation to HSV, the image is shown here without re-conversion to a different space for viewing.
 
 
