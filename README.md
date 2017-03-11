@@ -33,7 +33,7 @@ Note the addition of three dropout layers (with p = 0.2) between the final three
 
 <img align='center' src='steernet.png' alt='Steernet Architecture, modified from Bojarski et. al. 2016.'>
 
-Non-negligible image pre-processing is carried out on each image fed to the model - including histogram normalization (CLAHE), cropping, color-space conversion, etc. Further details below. See `model.py`.
+Non-negligible image pre-processing is carried out on each image fed to the model - including histogram normalization (CLAHE), cropping, color-space conversion, etc. as described above.
 
 `training.py` has a simple command line interface. Generally training/testing images are preprocessed separately to speed up model training. The flag `--skip-training` enables the user to halt after pre-processing the training/testing data, without training the model. The flat `--skip-preproc` enables training of the model without re-processing the training/testing data, which is not necessary if simple markdchanges in the model are being evaluated.
 
