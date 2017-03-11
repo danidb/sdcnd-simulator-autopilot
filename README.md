@@ -31,7 +31,7 @@ Briefly, the architecture applied here is defined in `model.py` and is implement
 
 Note the addition of three dropout layers (with p = 0.2) between the final three convolutions, to help mitigate overfitting. When regularization was applied to the fully connected layer, the model tended to become stuck a local minima of the loss function corresponding to a constant steering angle regardless of the input image. After extensive experimentation, only the dropout layers were incorporated into the final model.
 
-<img align='center' src='steernet.png' alt='Steernet Architecture, modified from Bojarski et. al. 2016.'>
+<img align='center' src=model.png' alt='Steernet Architecture, modified from Bojarski et. al. 2016.'>
 
 Non-negligible image pre-processing is carried out on each image fed to the model - including histogram normalization (CLAHE), cropping, color-space conversion, etc. as described above.
 
