@@ -66,7 +66,7 @@ Also, the model presented here does tend to make the car 'weave about'. While th
 
 Furthermore, just as the network is trained to predict steering angle, it could be extended, in such an ideal environment where the vehicle is alone on the road, to control the breaking and acceleration of the car as well. The second track has a much more diverse topology and features related to road inclination would also be necessary for such a model to be successful.
 
-Finally, a criticism. The project rubric includes the line 'Training data has been chosen to induce the desired behavior in the simulation.' This can be a dangerous notion. It is a wildly unscientific and disturbing suggestion. It is nearly an instruction to overfit. This could have been phrased better. A second track, which is more similar to the first, or any greater variety of training scenarios, would have been necessary to actually produce a model following sound machine learning practice.
+Finally, a criticism. The project rubric includes the line 'Training data has been chosen to induce the desired behavior in the simulation.' This can be a dangerous notion, and could have been phrased better. A second track,  more similar to the first than the one provided, or any greater variety of training scenarios, would have been necessary to actually produce a model following sound machine learning practice.
 
 ## References
 **[1]** Bojarski, Mariusz, Davide Del Testa, Daniel Dworakowski, Bernhard Firner, Beat Flepp, Prasoon Goyal, Lawrence D. Jackel, et al. 2016. “End to End Learning for Self-Driving Cars.” arXiv [cs.CV]. arXiv. http://arxiv.org/abs/1604.07316.
